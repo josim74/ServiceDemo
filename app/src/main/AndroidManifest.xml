@@ -16,9 +16,6 @@
             android:name=".MyService"
             android:enabled="true"
             android:exported="true"></service>
-        <service
-            android:name=".BackgroundNotificationService"
-            android:exported="false" />
 
         <activity android:name=".MainActivity">
             <intent-filter>
