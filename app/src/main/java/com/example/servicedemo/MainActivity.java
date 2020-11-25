@@ -67,15 +67,15 @@ public class MainActivity extends AppCompatActivity {
 
             if (intent.getAction().equals(PROGRESS_UPDATE)) {
 
-                boolean downloadComplete = intent.getBooleanExtra("downloadComplete", false);
+                String downloadComplete = intent.getStringExtra("downloadComplete");
                 //Log.d("API123", download.getProgress() + " current progress");
 
-                if (downloadComplete) {
+                if (downloadComplete != null) {
 
                     Toast.makeText(getApplicationContext(), "File download completed", Toast.LENGTH_SHORT).show();
 
                     File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath() + File.separator +
-                            "journaldev-image-downloaded.jpg");
+                            downloadComplete);
 
                     Picasso.get().load(file).into(imageView);
 
@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
     private void startImageDownload() {
 
         Log.d("TRACKING", "startImageDownload: 1");
-        Intent intent = new Intent(this, BackgroundNotificationService.class);
+        Intent intent = new Intent(this, MyService.class);
         startService(intent);
 
     }
