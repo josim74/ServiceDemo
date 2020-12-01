@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -21,8 +20,6 @@ import com.example.servicedemo.restapi.ApiClient;
 import com.example.servicedemo.restapi.RetrofitApi;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedInputStream;
@@ -37,7 +34,6 @@ import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import retrofit2.Retrofit;
 
 public class MyService extends Service {
     public MyService() {
@@ -47,6 +43,10 @@ public class MyService extends Service {
     private NotificationManager notificationManager;
     private int itemCount = 0;
     private int imageListSize = 0;
+    RetrofitApi retrofitApi;
+    Call<JsonArray> callImageList;
+    Call<ResponseBody> callImageDownload;
+    boolean isCanceled = false;
 
     @Override
     public void onCreate() {
@@ -56,6 +56,12 @@ public class MyService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         createNotification();
+        if(intent.getAction() == ("STOP_SERVICE")){
+            if(callImageDownload != null){
+                callImageDownload.cancel();
+                isCanceled = true;
+            }
+        }
         return START_STICKY;
     }
 
@@ -93,41 +99,42 @@ public class MyService extends Service {
 
     private void initRetrofit() {
         Log.d("TRACKING", "startImageDownload: 3");
-        final RetrofitApi retrofitApi = ApiClient.getClient().create(RetrofitApi.class);
+        retrofitApi = ApiClient.getClient().create(RetrofitApi.class);
 
-        Call<JsonArray> callImageList = retrofitApi.getImageDetailsList(1, 50);
+        callImageList = retrofitApi.getImageDetailsList(1, 30);
         callImageList.enqueue(new Callback<JsonArray>() {
             @Override
             public void onResponse(Call<JsonArray> callImageList, Response<JsonArray> response) {
                 ArrayList<Image> images = new Gson().fromJson(response.body(), new TypeToken<ArrayList<Image>>() {}.getType());
                 imageListSize = images.size();
-                for(final Image img : images){
-                    itemCount++;
-                    Call<ResponseBody> callImageDownload = retrofitApi.downloadImage(img.getDownload_url());
-                    callImageDownload.enqueue(new Callback<ResponseBody>() {
-                        @Override
-                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> rs) {
-                            try {
-                                    downloadImage(rs.body(), img.getId());
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Call<ResponseBody> call, Throwable t) {
-
-                        }
-                    });
-
-                    // if you want to cancel download............
-//                    if(itemCount==5){
-//                        callImageList.cancel();
-//                        callImageDownload.cancel();
-//                        break;
-//                    }
-
-                }
+                downloadImage(images);
+//                for(final Image img : images){
+//                    itemCount++;
+//                    Call<ResponseBody> callImageDownload = retrofitApi.downloadImage(img.getDownload_url());
+//                    callImageDownload.enqueue(new Callback<ResponseBody>() {
+//                        @Override
+//                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> rs) {
+//                            try {
+//                                    downloadImage(rs.body(), img.getId());
+//                            } catch (IOException e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
+//
+//                        @Override
+//                        public void onFailure(Call<ResponseBody> call, Throwable t) {
+//
+//                        }
+//                    });
+//
+//                    // if you want to cancel download............
+////                    if(itemCount==5){
+////                        callImageList.cancel();
+////                        callImageDownload.cancel();
+////                        break;
+////                    }
+//
+//                }
             }
 
             @Override
@@ -137,7 +144,33 @@ public class MyService extends Service {
         });
     }
 
-    private void downloadImage(ResponseBody body, int id) throws IOException {
+    private void downloadImage(final ArrayList<Image> images) {
+
+        callImageDownload = retrofitApi.downloadImage(images.get(itemCount).getDownload_url());
+        callImageDownload.enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> rs) {
+                try {
+                    createImage(rs.body(), images.get(itemCount).getId());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                itemCount++;
+                if(isCanceled){
+                    return;
+                }
+                downloadImage(images);
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+
+            }
+        });
+
+    }
+
+    private void createImage(ResponseBody body, int id) throws IOException {
 
         int count;
         byte data[] = new byte[1024 * 4];
@@ -198,5 +231,10 @@ public class MyService extends Service {
     public IBinder onBind(Intent intent) {
         // TODO: Return the communication channel to the service.
         throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        notificationManager.cancel(0);
     }
 }

@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -29,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 1;
     ImageView imageView;
     FloatingActionButton fab;
+    Button btn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
 
         imageView = findViewById(R.id.imageView);
         fab = findViewById(R.id.fab);
+        btn = findViewById(R.id.btn_cancel);
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -46,6 +49,12 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     requestPermission();
                 }
+            }
+        });
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                cancelDownload();
             }
         });
 
@@ -97,6 +106,12 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, MyService.class);
         startService(intent);
 
+    }
+
+    private void cancelDownload(){
+        Intent intent = new Intent(this, MyService.class);
+        intent.setAction("STOP_SERVICE");
+        startService(intent);
     }
 
     private void requestPermission() {
