@@ -145,7 +145,10 @@ public class MyService extends Service {
     }
 
     private void downloadImage(final ArrayList<Image> images) {
-
+        Log.d("TAG", "downloadImage: "+itemCount);
+        if(itemCount >= imageListSize){
+            return;
+        }
         callImageDownload = retrofitApi.downloadImage(images.get(itemCount).getDownload_url());
         callImageDownload.enqueue(new Callback<ResponseBody>() {
             @Override
